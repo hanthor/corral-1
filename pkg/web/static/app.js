@@ -1111,7 +1111,16 @@ const VM_GRID_COLUMNS = [
   { id: 'cpu', label: 'CPU', width: 80 },
   { id: 'mem', label: 'Mem', width: 100 },
   { id: 'ip', label: 'IP', width: 150, value: (vm) => vm.ip || '—' },
-  { id: 'tags', label: 'Tags', width: 160, value: (vm) => (vm.tags || []).join(', ') },
+  { id: 'tags', label: 'Tags', width: 160, value: (vm) => (vm.tags || []).join(', '), render: (vm) => {
+    const chips = document.createElement('span');
+    for (const t of vm.tags || []) {
+      const chip = document.createElement('span');
+      chip.className = 'chip mini';
+      chip.textContent = t;
+      chips.appendChild(chip);
+    }
+    return chips;
+  } },
 ];
 
 function bindVMTable(root, list) {
@@ -1125,7 +1134,7 @@ function bindVMTable(root, list) {
   };
   mountGrid(root.querySelector('.vm-grid'), {
     id: 'vms', columns: VM_GRID_COLUMNS, rows: list, rowKey: vmKey,
-    selected: selectedVMKeys,
+    selected: selectedVMKeys, checkClass: 'vm-check', checkAllClass: 'vm-check-all',
     onRowClick: (vm) => select({ type: 'vm', key: vmKey(vm) }),
     onSelectionChange: () => { update(); renderTree(); },
   });
@@ -1158,7 +1167,7 @@ function bindVMTable(root, list) {
 // the same mark-template endpoint to unmark/remove from here.
 function templateTable(list) {
   if (!list.length) return `<p class="muted">No templates. Mark a VM as a template from its detail page.</p>`;
-  return `<table><thead><tr><th>Name</th><th>Namespace</th><th>CPU</th><th>Mem</th><th></th></tr></thead><tbody>
+  return `<table class="template-table"><thead><tr><th>Name</th><th>Namespace</th><th>CPU</th><th>Mem</th><th></th></tr></thead><tbody>
     ${list.map((v) => `<tr data-key="${esc(vmKey(v))}">
       <td>${esc(v.name)}</td><td>${esc(v.namespace)}</td><td>${v.cpu}</td><td>${esc(v.mem)}</td>
       <td><button class="btn sm danger" data-untemplate="${esc(vmKey(v))}">Unmark</button></td>
@@ -1177,7 +1186,8 @@ function bindTemplateTable(root) {
       setTimeout(refresh, 600);
     };
   });
-  root.querySelectorAll('tr[data-key]').forEach((tr) => {
+  // Scoped to the template table: the inventory grid binds its own rows.
+  root.querySelectorAll('.template-table tr[data-key]').forEach((tr) => {
     tr.onclick = (e) => {
       if (e.target.closest('button')) return;
       select({ type: 'vm', key: tr.dataset.key });

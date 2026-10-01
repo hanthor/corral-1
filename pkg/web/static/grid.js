@@ -164,6 +164,20 @@ export function mountGrid(host, options) {
     const all = views(); all[name] = JSON.parse(JSON.stringify(state)); saveViews(all); input.value = ''; renderViews();
   };
 
+  // Update checkbox state in place: re-rendering would replace the element
+  // the user just toggled and lose its focus.
+  function syncSelection() {
+    body.querySelectorAll('tr[data-key]').forEach((tr) => {
+      const box = tr.querySelector('td.check input');
+      if (box) box.checked = selected.has(tr.dataset.key);
+    });
+    const all = head.querySelector('th.check input');
+    if (!all) return;
+    const keys = filteredRows().map(rowKey);
+    all.checked = keys.length > 0 && keys.every((key) => selected.has(key));
+    all.indeterminate = keys.some((key) => selected.has(key)) && !all.checked;
+  }
+
   function render() {
     const cols = visibleColumns();
     const result = filteredRows();
@@ -175,9 +189,9 @@ export function mountGrid(host, options) {
     head.replaceChildren();
     const labels = document.createElement('tr');
     const selectHead = document.createElement('th'); selectHead.className = 'check';
-    const all = document.createElement('input'); all.type = 'checkbox'; all.title = 'Select all visible rows'; all.setAttribute('aria-label', 'Select all visible rows');
+    const all = document.createElement('input'); all.type = 'checkbox'; all.className = options.checkAllClass || 'grid-check-all'; all.title = 'Select all visible rows'; all.setAttribute('aria-label', 'Select all visible rows');
     const keys = result.map(rowKey); all.checked = keys.length > 0 && keys.every((key) => selected.has(key)); all.indeterminate = keys.some((key) => selected.has(key)) && !all.checked;
-    all.onchange = () => { keys.forEach((key) => all.checked ? selected.add(key) : selected.delete(key)); onSelectionChange?.(selected); render(); };
+    all.onchange = () => { keys.forEach((key) => all.checked ? selected.add(key) : selected.delete(key)); onSelectionChange?.(selected); syncSelection(); };
     selectHead.appendChild(all); labels.appendChild(selectHead);
     cols.forEach((col) => {
       const th = document.createElement('th'); th.draggable = true; th.dataset.column = col.id;
@@ -207,7 +221,7 @@ export function mountGrid(host, options) {
       const tr = document.createElement('tr'); tr.dataset.key = rowKey(row); tr.tabIndex = 0;
       tr.onclick = (event) => { if (!event.target.closest('.check')) onRowClick?.(row); };
       tr.onkeydown = (event) => { if (event.key === 'Enter') onRowClick?.(row); };
-      const checkCell = document.createElement('td'); checkCell.className = 'check'; const check = document.createElement('input'); check.type = 'checkbox'; check.checked = selected.has(rowKey(row)); check.setAttribute('aria-label', `Select ${rowKey(row)}`); check.onchange = () => { check.checked ? selected.add(rowKey(row)) : selected.delete(rowKey(row)); onSelectionChange?.(selected); render(); }; checkCell.appendChild(check); tr.appendChild(checkCell);
+      const checkCell = document.createElement('td'); checkCell.className = 'check'; const check = document.createElement('input'); check.type = 'checkbox'; check.className = options.checkClass || 'grid-check'; check.checked = selected.has(rowKey(row)); check.setAttribute('aria-label', `Select ${rowKey(row)}`); check.onchange = () => { check.checked ? selected.add(rowKey(row)) : selected.delete(rowKey(row)); onSelectionChange?.(selected); syncSelection(); }; checkCell.appendChild(check); tr.appendChild(checkCell);
       cols.forEach((col) => { const td = document.createElement('td'); const rendered = col.render?.(row); if (rendered instanceof Node) td.appendChild(rendered); else td.textContent = rendered ?? valueFor(row, col) ?? ''; tr.appendChild(td); });
       body.appendChild(tr);
     });
