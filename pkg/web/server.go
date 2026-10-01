@@ -222,7 +222,7 @@ func newMux() (http.Handler, error) {
 	vncHandler := websocket.Handler(vncBridge)
 	if useDemoConsole {
 		vncHandler = func(ws *websocket.Conn) {
-			defer ws.Close()
+			defer func() { _ = ws.Close() }()
 			serveDemoVNC(ws)
 		}
 	}

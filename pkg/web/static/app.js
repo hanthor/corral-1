@@ -174,6 +174,9 @@ async function refresh(force = false) {
   offlineShown = false;
   if (treeView === 'pool') await loadPools();
   try { cts = await api('/api/cts'); } catch { cts = []; } // best-effort — don't fail the whole refresh over CTs
+  // A pop-out console opens straight onto the console tab, which the guard
+  // below never renders on poll — render it once here.
+  let renderPopout = false;
   if (consoleRoute && !consoleRouteApplied) {
     consoleRouteApplied = true;
     const vm = findVM(consoleRoute);
@@ -182,6 +185,7 @@ async function refresh(force = false) {
       tab = 'console';
       document.body.classList.add('console-popout');
       document.title = `${vm.name} console · Corral`;
+      renderPopout = true;
     }
   }
   const fp = JSON.stringify([vms, cts, nodes, hostPower, selected, tab]);
@@ -195,7 +199,7 @@ async function refresh(force = false) {
   const contentScroll = contentEl ? contentEl.scrollTop : 0;
   renderTree();
   // Don't clobber live consoles (or the multiview grid) on poll.
-  if (tab !== 'console' && tab !== 'terminal' && selected.type !== 'multiview') renderContent();
+  if (renderPopout || (tab !== 'console' && tab !== 'terminal' && selected.type !== 'multiview')) renderContent();
   if (treeEl) treeEl.scrollTop = treeScroll;
   if (contentEl) contentEl.scrollTop = contentScroll;
 }

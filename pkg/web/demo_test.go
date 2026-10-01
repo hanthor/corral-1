@@ -70,7 +70,7 @@ func TestDemoVNCCompletesRFBHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial demo console: %v", err)
 	}
-	defer ws.Close()
+	defer func() { _ = ws.Close() }()
 
 	version := make([]byte, 12)
 	if _, err := io.ReadFull(ws, version); err != nil || string(version) != "RFB 003.008\n" {
